@@ -1,7 +1,6 @@
 const std = @import("std");
 const objc = @import("objc.zig");
 const webkit = @import("webkit.zig");
-const toolbar_delegate = @import("toolbar_delegate.zig");
 
 pub fn main() !void {
     const pool = objc.create_instance("NSAutoreleasePool") orelse {
@@ -43,31 +42,10 @@ pub fn main() !void {
         return error.WindowInitFailed;
     };
 
-    const delegate = toolbar_delegate.createDelegate() orelse {
-        std.debug.print("Failed to create toolbar delegate\n", .{});
-        return error.DelegateInitFailed;
-    };
-
-    const toolbar = webkit.NSToolbar.init("MainToolbar") orelse {
-        std.debug.print("Failed to create toolbar\n", .{});
-        return error.ToolbarInitFailed;
-    };
-    toolbar.setShowsBaselineSeparator(true);
-
-    const set_delegate_sel = objc.sel_registerName(objc.str("setDelegate:")) orelse return error.SelectorFailed;
-    const set_delegate_func: *const fn (objc.id, objc.SEL, objc.id) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
-    set_delegate_func(toolbar.id, set_delegate_sel, delegate);
-
-    const set_toolbar_sel = objc.sel_registerName(objc.str("setToolbar:")) orelse return error.SelectorFailed;
-    const set_toolbar_func: *const fn (objc.id, objc.SEL, objc.id) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
-    set_toolbar_func(window, set_toolbar_sel, toolbar.id);
-
     const webview = webkit.WKWebView.init(frame) orelse {
         std.debug.print("Failed to create webview\n", .{});
         return error.WebViewInitFailed;
     };
-
-    toolbar_delegate.setWebView(&webview);
     
     const set_content_view_sel = objc.sel_registerName(objc.str("setContentView:")) orelse return error.SelectorFailed;
     const set_view_func: *const fn (objc.id, objc.SEL, objc.id) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
