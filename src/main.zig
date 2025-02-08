@@ -82,6 +82,21 @@ pub fn main() !void {
     const webview = webkit.WKWebView.init(frame) orelse return error.WebViewInitFailed;
     setView(content_view_controller, webview.id);
 
+    // Enable layer backing for the webview
+    const wants_layer_sel = objc.sel_registerName(objc.str("setWantsLayer:")) orelse return error.SelectorFailed;
+    const set_wants_layer_func: *const fn (objc.id, objc.SEL, bool) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
+    set_wants_layer_func(webview.id, wants_layer_sel, true);
+
+    // Get the layer
+    const layer_sel = objc.sel_registerName(objc.str("layer")) orelse return error.SelectorFailed;
+    const get_layer_func: *const fn (objc.id, objc.SEL) callconv(.C) ?objc.id = @ptrCast(&objc.objc_msgSend);
+    const layer = get_layer_func(webview.id, layer_sel) orelse return error.LayerFailed;
+
+    // Set corner radius
+    const corner_radius_sel = objc.sel_registerName(objc.str("setCornerRadius:")) orelse return error.SelectorFailed;
+    const set_corner_radius_func: *const fn (objc.id, objc.SEL, f64) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
+    set_corner_radius_func(layer, corner_radius_sel, 10.0);
+
     // Add view controllers to split view controller
     addSplitViewItem(split_view_controller, sidebar_view_controller, false, true);
     addSplitViewItem(split_view_controller, content_view_controller, false, false);
