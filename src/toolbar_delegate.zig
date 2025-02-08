@@ -30,7 +30,7 @@ pub const ToolbarDelegate = struct {
             delegate_class,
             toolbar_item_for_id_sel,
             @ptrFromInt(@intFromPtr(&toolbarItemForIdentifier)),
-            types,
+            objc.str("@@:@:@:B"),
         );
 
         objc.objc_registerClassPair(delegate_class);
