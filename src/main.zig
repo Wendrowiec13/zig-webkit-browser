@@ -1,6 +1,7 @@
 const std = @import("std");
 const objc = @import("objc.zig");
 const webkit = @import("webkit.zig");
+const toolbar_delegate = @import("toolbar_delegate.zig");
 
 pub fn main() !void {
     const pool = objc.create_instance("NSAutoreleasePool") orelse {
@@ -30,7 +31,8 @@ pub fn main() !void {
         (1 << 0) | // titled
         (1 << 1) | // closable
         (1 << 2) | // miniaturizable
-        (1 << 3); // resizable
+        (1 << 3) | // resizable
+        (1 << 12); // unified title and toolbar
 
     const frame = webkit.CGRect{
         .origin = .{ .x = 100, .y = 100 },
@@ -42,6 +44,11 @@ pub fn main() !void {
         return error.WindowInitFailed;
     };
 
+    // Hide the window's title
+    const set_title_visibility_sel = objc.sel_registerName(objc.str("setTitleVisibility:")) orelse return error.SelectorFailed;
+    const set_title_visibility_func: *const fn (objc.id, objc.SEL, c_long) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
+    set_title_visibility_func(window, set_title_visibility_sel, 2); // NSWindowTitleHidden = 2
+
     const min_size = webkit.CGSize{ .width = 510, .height = 700 };
     const set_min_size_sel = objc.sel_registerName(objc.str("setMinSize:")) orelse return error.SelectorFailed;
     const set_size_func: *const fn (objc.id, objc.SEL, webkit.CGSize) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
@@ -52,6 +59,18 @@ pub fn main() !void {
         std.debug.print("Failed to create split view controller\n", .{});
         return error.SplitViewControllerFailed;
     };
+
+    const toolbar_delegate_instance = toolbar_delegate.ToolbarDelegate.init() orelse return error.ToolbarDelegateFailed;
+    const toolbar = webkit.NSToolbar.init("MainToolbar") orelse return error.ToolbarInitFailed;
+    toolbar.setShowsBaselineSeparator(false);
+
+    const set_delegate_sel = objc.sel_registerName(objc.str("setDelegate:")) orelse return error.SelectorFailed;
+    const set_delegate_func: *const fn (objc.id, objc.SEL, objc.id) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
+    set_delegate_func(toolbar.id, set_delegate_sel, toolbar_delegate_instance.id);
+
+    const set_toolbar_sel = objc.sel_registerName(objc.str("setToolbar:")) orelse return error.SelectorFailed;
+    const set_toolbar_func: *const fn (objc.id, objc.SEL, objc.id) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
+    set_toolbar_func(window, set_toolbar_sel, toolbar.id);
 
     // Create sidebar view controller
     const sidebar_view_controller = createViewController() orelse return error.ViewControllerFailed;
@@ -71,6 +90,15 @@ pub fn main() !void {
     const set_content_view_sel = objc.sel_registerName(objc.str("setContentViewController:")) orelse return error.SelectorFailed;
     const set_view_func: *const fn (objc.id, objc.SEL, objc.id) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
     set_view_func(window, set_content_view_sel, split_view_controller);
+
+    // Set the window to be full size content view
+    const set_style_mask_sel = objc.sel_registerName(objc.str("setStyleMask:")) orelse return error.SelectorFailed;
+    const set_style_mask_func: *const fn (objc.id, objc.SEL, c_ulong) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
+    set_style_mask_func(window, set_style_mask_sel, style_mask | (1 << 15)); // NSWindowStyleMaskFullSizeContentView = 1 << 15
+
+    const set_titlebar_appearance_sel = objc.sel_registerName(objc.str("setTitlebarAppearsTransparent:")) orelse return error.SelectorFailed;
+    const set_titlebar_appearance_func: *const fn (objc.id, objc.SEL, bool) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
+    set_titlebar_appearance_func(window, set_titlebar_appearance_sel, true);
 
     const activate_sel = objc.sel_registerName(objc.str("activateIgnoringOtherApps:")) orelse return error.SelectorFailed;
     const activate_func: *const fn (objc.id, objc.SEL, bool) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
