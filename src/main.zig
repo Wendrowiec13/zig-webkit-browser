@@ -61,6 +61,64 @@ pub fn main() !void {
         return error.SplitViewControllerFailed;
     };
 
+    // Create sidebar view controller
+    const sidebar_view_controller = view_functions.createViewController() orelse return error.ViewControllerFailed;
+    const sidebar_view = view_functions.createView() orelse return error.ViewFailed;
+    view_functions.setView(sidebar_view_controller, sidebar_view);
+
+    // Create and add URL text field to sidebar
+    const url_field = view_functions.createTextField() orelse return error.TextFieldFailed;
+    const add_subview_sel = objc.sel_registerName(objc.str("addSubview:")) orelse return error.SelectorFailed;
+    const add_subview_func: *const fn (objc.id, objc.SEL, objc.id) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
+    add_subview_func(sidebar_view, add_subview_sel, url_field);
+
+    // Add constraints for the text field
+    const leading_sel = objc.sel_registerName(objc.str("leadingAnchor")) orelse return error.SelectorFailed;
+    const trailing_sel = objc.sel_registerName(objc.str("trailingAnchor")) orelse return error.SelectorFailed;
+    const top_sel = objc.sel_registerName(objc.str("topAnchor")) orelse return error.SelectorFailed;
+    
+    const get_anchor_func: *const fn (objc.id, objc.SEL) callconv(.C) ?objc.id = @ptrCast(&objc.objc_msgSend);
+    const constraint_sel = objc.sel_registerName(objc.str("constraintEqualToAnchor:constant:")) orelse return error.SelectorFailed;
+    const constraint_func: *const fn (objc.id, objc.SEL, objc.id, f64) callconv(.C) ?objc.id = @ptrCast(&objc.objc_msgSend);
+    
+    const activate_url_input_sel = objc.sel_registerName(objc.str("setActive:")) orelse return error.SelectorFailed;
+    const activate_url_input_func: *const fn (objc.id, objc.SEL, bool) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
+
+    const padding: f64 = 16.0;
+    
+    // Leading constraint
+    const leading_constraint = constraint_func(
+        get_anchor_func(url_field, leading_sel) orelse return error.AnchorFailed,
+        constraint_sel,
+        get_anchor_func(sidebar_view, leading_sel) orelse return error.AnchorFailed,
+        padding
+    ) orelse return error.ConstraintFailed;
+    activate_url_input_func(leading_constraint, activate_url_input_sel, true);
+
+    // Trailing constraint
+    const trailing_constraint = constraint_func(
+        get_anchor_func(url_field, trailing_sel) orelse return error.AnchorFailed,
+        constraint_sel,
+        get_anchor_func(sidebar_view, trailing_sel) orelse return error.AnchorFailed,
+        -padding
+    ) orelse return error.ConstraintFailed;
+    activate_url_input_func(trailing_constraint, activate_url_input_sel, true);
+
+    // Top constraint
+    const top_constraint = constraint_func(
+        get_anchor_func(url_field, top_sel) orelse return error.AnchorFailed,
+        constraint_sel,
+        get_anchor_func(sidebar_view, top_sel) orelse return error.AnchorFailed,
+        padding + 24
+    ) orelse return error.ConstraintFailed;
+    activate_url_input_func(top_constraint, activate_url_input_sel, true);
+
+    // Create content view controller with webview
+    const content_view_controller = view_functions.createViewController() orelse return error.ViewControllerFailed;
+    const webview = webkit.WKWebView.init(frame) orelse return error.WebViewInitFailed;
+    const padded_view = view_functions.createPaddedView(webview.id, 8) orelse return error.PaddedViewFailed;
+    view_functions.setView(content_view_controller, padded_view);
+
     const toolbar_delegate_instance = toolbar_delegate.ToolbarDelegate.init() orelse return error.ToolbarDelegateFailed;
     const toolbar = webkit.NSToolbar.init("MainToolbar") orelse return error.ToolbarInitFailed;
     toolbar.setShowsBaselineSeparator(false);
@@ -72,17 +130,6 @@ pub fn main() !void {
     const set_toolbar_sel = objc.sel_registerName(objc.str("setToolbar:")) orelse return error.SelectorFailed;
     const set_toolbar_func: *const fn (objc.id, objc.SEL, objc.id) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
     set_toolbar_func(window, set_toolbar_sel, toolbar.id);
-
-    // Create sidebar view controller
-    const sidebar_view_controller = view_functions.createViewController() orelse return error.ViewControllerFailed;
-    const sidebar_view = view_functions.createView() orelse return error.ViewFailed;
-    view_functions.setView(sidebar_view_controller, sidebar_view);
-
-    // Create content view controller with webview
-    const content_view_controller = view_functions.createViewController() orelse return error.ViewControllerFailed;
-    const webview = webkit.WKWebView.init(frame) orelse return error.WebViewInitFailed;
-    const padded_view = view_functions.createPaddedView(webview.id, 8) orelse return error.PaddedViewFailed;
-    view_functions.setView(content_view_controller, padded_view);
 
     // Enable layer backing for the webview 
     const wants_layer_sel = objc.sel_registerName(objc.str("setWantsLayer:")) orelse return error.SelectorFailed;

@@ -4,6 +4,8 @@ pub const id = *anyopaque;
 pub const SEL = *anyopaque;
 pub const Class = *anyopaque;
 pub const IMP = *anyopaque;
+pub extern "c" fn objc_getAssociatedObject(object: id, key: [*:0]const u8) ?*anyopaque;
+pub extern "c" fn objc_setAssociatedObject(object: id, key: [*:0]const u8, value: ?*anyopaque, policy: c_ulong) void;
 
 pub extern "c" fn objc_getClass(name: [*:0]const u8) ?Class;
 pub extern "c" fn sel_registerName(name: [*:0]const u8) ?SEL;

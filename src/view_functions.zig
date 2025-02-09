@@ -153,3 +153,41 @@ fn addEdgeConstraint(view: objc.id, container: objc.id, attribute: NSLayoutAttri
     const add_func: *const fn (objc.id, objc.SEL, objc.id) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
     add_func(container, add_constraint_sel, constraint);
 }
+
+pub fn createTextField() ?objc.id {
+    const cls = objc.objc_getClass(objc.str("NSTextField")) orelse return null;
+    const alloc_sel = objc.sel_registerName(objc.str("alloc")) orelse return null;
+    const init_sel = objc.sel_registerName(objc.str("init")) orelse return null;
+
+    const text_field = objc.msg_send(objc.msg_send(cls, alloc_sel), init_sel) orelse return null;
+
+    // Configure the text field
+    const bezeled_sel = objc.sel_registerName(objc.str("setBezeled:")) orelse return null;
+    const bezeled_func: *const fn (objc.id, objc.SEL, bool) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
+    bezeled_func(text_field, bezeled_sel, true);
+
+    const editable_sel = objc.sel_registerName(objc.str("setEditable:")) orelse return null;
+    const editable_func: *const fn (objc.id, objc.SEL, bool) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
+    editable_func(text_field, editable_sel, true);
+
+    const selectable_sel = objc.sel_registerName(objc.str("setSelectable:")) orelse return null;
+    const selectable_func: *const fn (objc.id, objc.SEL, bool) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
+    selectable_func(text_field, selectable_sel, true);
+
+    // Set placeholder text
+    const placeholder_cls = objc.objc_getClass(objc.str("NSString")) orelse return null;
+    const str_sel = objc.sel_registerName(objc.str("stringWithUTF8String:")) orelse return null;
+    const str_func: *const fn (objc.id, objc.SEL, [*:0]const u8) callconv(.C) ?objc.id = @ptrCast(&objc.objc_msgSend);
+    const placeholder = str_func(placeholder_cls, str_sel, objc.str("Enter URL")) orelse return null;
+
+    const set_placeholder_sel = objc.sel_registerName(objc.str("setPlaceholderString:")) orelse return null;
+    const set_placeholder_func: *const fn (objc.id, objc.SEL, objc.id) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
+    set_placeholder_func(text_field, set_placeholder_sel, placeholder);
+
+    // Disable auto-resizing mask to use constraints
+    const translates_sel = objc.sel_registerName(objc.str("setTranslatesAutoresizingMaskIntoConstraints:")) orelse return null;
+    const translates_func: *const fn (objc.id, objc.SEL, bool) callconv(.C) void = @ptrCast(&objc.objc_msgSend);
+    translates_func(text_field, translates_sel, false);
+
+    return text_field;
+}
